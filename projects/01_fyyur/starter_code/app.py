@@ -12,6 +12,7 @@ import logging
 from logging import Formatter, FileHandler
 from flask_wtf import Form
 from forms import *
+from flask_migrate import Migrate
 #----------------------------------------------------------------------------#
 # App Config.
 #----------------------------------------------------------------------------#
@@ -23,9 +24,15 @@ db = SQLAlchemy(app)
 
 # TODO: connect to a local postgresql database
 
+migrate = Migrate(app, db)
+
 #----------------------------------------------------------------------------#
 # Models.
 #----------------------------------------------------------------------------#
+venue_showns = db.Table('Venue_shows',
+    db.Column('venu_id', db.Integer, db.ForeignKey('Venue.id'), primary_key=True),
+    db.Column('show_id', db.Integer, db.ForeignKey('Show.id'), primary_key=True)
+)
 
 class Venue(db.Model):
     __tablename__ = 'Venue'
@@ -40,6 +47,11 @@ class Venue(db.Model):
     facebook_link = db.Column(db.String(120))
 
     # TODO: implement any missing fields, as a database migration using Flask-Migrate
+    website_link = db.Column(db.String(120))
+    seeking_talent = db.Column(db.Boolean, default=False)
+    seeking_description = db.Column(db.String(500))
+    genres = db.Column(db.String(120))
+    shows = db.relationship('Show', secondary=venue_showns, backref=db.backref('Venue', lazy=True))
 
 class Artist(db.Model):
     __tablename__ = 'Artist'
@@ -54,9 +66,17 @@ class Artist(db.Model):
     facebook_link = db.Column(db.String(120))
 
     # TODO: implement any missing fields, as a database migration using Flask-Migrate
+    seeking_venue = db.Column(db.Boolean, default=False)
+    shows = db.relationship("Show", backref="list")
 
 # TODO Implement Show and Artist models, and complete all model relationships and properties, as a database migration.
+class Show(db.Model):
+    __tablename__ = 'Show'
+    id = db.Column(db.Integer, primary_key=True)
+    start_time = db.Column(db.DateTime, nullable=False)
+    artist_id = db.Column(db.Integer, db.ForeignKey('Artist.id'))
 
+    
 #----------------------------------------------------------------------------#
 # Filters.
 #----------------------------------------------------------------------------#
@@ -221,10 +241,43 @@ def create_venue_form():
 def create_venue_submission():
   # TODO: insert form data as a new Venue record in the db, instead
   # TODO: modify data to be the data object returned from db insertion
-
+  name = request.form.get('name')
+  city = request.form.get('city')
+  state = request.form.get('state')
+  address = request.form.get('address')
+  phone = request.form.get('phone')
+  genres = request.form.get('genres')
+  facebook_link = request.form.get('facebook_link')
+  image_link = request.form.get('image_link')
+  website_link = request.form.get('website_link')
+  seeking_talent = request.form.get('seeking_talent')
+  isSeekingTalent = seeking_talent.lower() in ("yes", "true", "t", "1")
+  seeking_description = request.form.get('seeking_description')
+  venue = Venue(
+      name = name,
+      city = city,
+      state = state,
+      address = address,
+      phone = phone,
+      genres = genres,
+      facebook_link = facebook_link,
+      image_link = image_link,
+      website_link = website_link,
+      seeking_talent = isSeekingTalent,
+      seeking_description = seeking_description
+      )
+  try: 
+      db.session.add(venue)
+      db.session.commit()
   # on successful db insert, flash success
-  flash('Venue ' + request.form['name'] + ' was successfully listed!')
+      flash('Venue ' + request.form['name'] + ' was successfully listed!')
   # TODO: on unsuccessful db insert, flash an error instead.
+  except Exception as error:
+      print(str(error.orig) + " for parameters" + str(error.params))
+      db.session.rollback()
+      flash('Error: Venue ' + request.form['name'] + ' could not be listed!')
+  finally:
+      db.session.close()
   # e.g., flash('An error occurred. Venue ' + data.name + ' could not be listed.')
   # see: http://flask.pocoo.org/docs/1.0/patterns/flashing/
   return render_template('pages/home.html')
