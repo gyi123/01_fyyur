@@ -205,7 +205,7 @@ def create_app(test_config=None):
     if (cid == 0):
         selection = query.filter(Question.id.not_in(olds)).all()
     else : 
-        selection = query.filter(Question.category == cid and Question.id.not_in(olds)).all()
+        selection = query.filter(Question.category == cid).filter(Question.id.not_in(olds)).all()
 
     statement = query.statement
     print(statement.compile(dialect=postgresql.dialect()))
