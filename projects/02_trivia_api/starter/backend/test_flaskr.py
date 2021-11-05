@@ -102,6 +102,57 @@ class TriviaTestCase(unittest.TestCase):
         data = json.loads(resp.data)
         self.assertEqual(resp.status_code, 200)
         self.assertTrue(len(data['questions']))
+        
+    def test_400_quizzes(self):
+        resp = self.client().post('/quizzes')
+        self.assertEqual(resp.status_code, 400)
+
+    def test_422_missing_Category_quizzes(self):
+        resp = self.client().post('/quizzes', json={'previous_questions':[1]})
+        self.assertEqual(resp.status_code, 422)
+        
+    def test_422_missing_previousQuestions_quizzes(self):
+        resp = self.client().post('/quizzes', json={'quiz_category': 1})
+        self.assertEqual(resp.status_code, 422)
+        
+    def test_Qizzes_In_All(self):
+        resp = self.client().post('/quizzes', json={'quiz_category': {
+                                                        'type': 'click',
+                                                        'id': 0},
+                                                    'previous_questions':[]
+                                                    })
+        data = json.loads(resp.data)
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(len(data['question']))
+        
+    def test_Qizzes_In_One(self):
+        resp = self.client().post('/quizzes', json={'quiz_category': {
+                                                        'type': 'click',
+                                                        'id': 2},
+                                                    'previous_questions':[]
+                                                    })
+        data = json.loads(resp.data)
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(len(data['question']))
+        
+    def test_Next_Qizzes(self):
+        jsonReq = {'quiz_category': {
+                        'type': 'click',
+                        'id': 2},
+                    'previous_questions':[]
+                   }
+        resp = self.client().post('/quizzes', json=jsonReq)
+        data = json.loads(resp.data)
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(len(data['question']))
+        prevQuestionId = data['question']['id']
+        jsonReq['previous_questions'].append(prevQuestionId)
+        resp = self.client().post('/quizzes', json=jsonReq)
+        data = json.loads(resp.data)
+        self.assertEqual(resp.status_code, 200)
+        newQuestionId = data['question']['id']
+        self.assertNotEqual(prevQuestionId, newQuestionId, "New Question Id is the same as old")
+        
 # Make the tests conveniently executable
 if __name__ == "__main__":
     unittest.main()

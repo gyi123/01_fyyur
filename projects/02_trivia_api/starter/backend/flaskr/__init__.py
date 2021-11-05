@@ -5,6 +5,7 @@ from flask_cors import CORS
 import random
 
 from models import setup_db, Question, Category
+from sqlalchemy.dialects import postgresql
 
 QUESTIONS_PER_PAGE = 10
 
@@ -200,10 +201,14 @@ def create_app(test_config=None):
         abort(422)
     cid = req['quiz_category']['id']
     olds= req['previous_questions']
+    query = Question.query
     if (cid == 0):
-        selection = Question.query.filter(Question.id.not_in(olds)).all()
-    else :
-        selection = Question.query.filter(Question.category == cid and Question.id.notin_(olds)).all()
+        selection = query.filter(Question.id.not_in(olds)).all()
+    else : 
+        selection = query.filter(Question.category == cid and Question.id.not_in(olds)).all()
+
+    statement = query.statement
+    print(statement.compile(dialect=postgresql.dialect()))
     if len(selection) > 0:
         return jsonify({
             'question': selection[0].format()
